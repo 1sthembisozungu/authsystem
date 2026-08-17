@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuthSystem - Create Account</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='static/register.css') }}">
+</head>
+
+<main class="auth-container">
+
+    <section class="register-card">
+
+        <div class="register-header">
+            <h1>Create Account</h1>
+            <p>Register to get started.</p>
+        </div>
+
+        <form method="POST" action="{{ url_for(register) }}">
+
+            <div class="form-group">
+                <label for="username">
+                    username
+                </label>
+
+                <input type="text" id="username" name="username" placeholder="Enter your username"
+                    autocomplete="username" required>
+
+            </div>
+
+            <div class="form-group">
+                <label for="email">
+                    Email Address
+                </label>
+
+                <input type="email" id="email" name="email" placeholder="Enter your email" autocomplete="email"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    Password
+                </label>
+
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" placeholder="Create a password"
+                        autocomplete="new-password" required>
+
+                    <button type="button" class="password-toggle" onclick="togglePassword('password', this)"
+                        aria-label="Show password">
+                        Show
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="form-group">
+                <label for="confirm_password">
+                    Confirm Password
+                </label>
+
+                <div class="password-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password"
+                        placeholder="Confirm your password" autocomplete="new-password" required>
+
+                    <button type="button" class="password-toggle" onclick="togglePassword('confirm_password', this)"
+                        aria-label="Show password">
+                        Show
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            {% with messages = get_flashed_messages() %}
+
+            {% if messages %}
+            <div class="flash-messages">
+
+                {% for message in messages %}
+                <p>
+                    {{ message }}
+                </p>
+                {% endfor %}
+
+            </div>
+            {% endif %}
+
+            {% endwith %}
+
+            <button type="submit" class="register-button">
+                Create Account
+            </button>
+
+        </form>
+
+
+        <div class="login-link">
+            <p>
+                Already have an account?
+                <a href="{{ url_for('login') }}">Login</a>
+            </p>
+        </div>
+
+    </section>
+
+</main>
+
+<body>
+
+</body>
+
+</html>
