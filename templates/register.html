@@ -20,7 +20,7 @@
                 <p>Register to get started.</p>
             </div>
 
-            <form method="POST" action="{{ url_for(register) }}">
+            <form method="POST" action="{{ url_for('register') }}">
 
                 <div class="form-group">
                     <label for="username">
@@ -112,6 +112,10 @@
         </section>
 
     </main>
+
+    <script src="{{ url_for('static', filename='js/register.js') }}"> 
+
+    </script>
 
 </body>
 
