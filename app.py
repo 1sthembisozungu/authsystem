@@ -1,11 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import os
 import secrets
 from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
+# from werkzeug.security import generate_password_hash
 
 
 from database import get_db_connection
@@ -156,7 +157,80 @@ AuthSystem
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+
+    if request.method == "POST":
+
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not email or not password:
+            flash("Please enter your email and password.")
+            return redirect(url_for("login"))
+
+        connection = get_db_connection()
+
+        try:
+            with connection.cursor() as cursor:
+
+                cursor.execute(
+                    """
+                    SELECT id, username, password_hash, email_verified
+                    FROM users
+                    WHERE email = %s
+                    """,
+                    (email,)
+                )
+
+                user = cursor.fetchone()
+
+        finally:
+            connection.close()
+
+        if not user:
+            flash("Invalid email or password.")
+            return redirect(url_for("login"))
+
+        user_id, username, password_hash, email_verified = user
+
+        # Check email verification
+        if not email_verified:
+            flash("Please verify your email before logging in.")
+            return redirect(url_for("login"))
+
+        # Check password
+        if not check_password_hash(password_hash, password):
+            flash("Invalid email or password.")
+            return redirect(url_for("login"))
+
+        # Create session
+        session["user_id"] = user_id
+        session["username"] = username
+
+        return redirect(url_for("dashboard"))
+
     return render_template("login.html")
+
+
+@app.route("/dashboard")
+def dashboard():
+
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template(
+        "dashboard.html",
+        username=session["username"]
+    )
+
+
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    flash("You have been logged out.")
+
+    return redirect(url_for("login"))
 
 
 @app.route("/forgot-password")
