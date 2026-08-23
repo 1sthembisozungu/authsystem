@@ -12,15 +12,48 @@
 
 <body>
 
-    <div class="dashboard">
+    <header class="topbar">
 
-        <h1>Welcome, @{{ username }}</h1>
+        <div class="logo">
+            AuthSystem
+        </div>
 
-        <p>You are successfully logged in to AuthSystem.</p>
+        <a href="{{ url_for('logout') }}" class="logout-btn">
+            Logout
+        </a>
 
-        <a href="{{ url_for('logout') }}">Logout</a>
+    </header>
 
-    </div>
+
+    <main class="dashboard">
+
+        <section class="welcome-card">
+
+            <h1>Welcome, @{{ username }}</h1>
+
+            <p class="welcome-text">
+                You are successfully logged in to AuthSystem.
+            </p>
+
+            <div class="member-info">
+
+                <div class="info-item">
+
+                    <span class="info-label">
+                        Member since
+                    </span>
+
+                    <span class="info-value">
+                        {{ created_at.strftime('%d %B %Y') }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
 
 </body>
 
