@@ -23,6 +23,7 @@ def create_users_table():
     try:
         with connection.cursor() as cursor:
 
+
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,

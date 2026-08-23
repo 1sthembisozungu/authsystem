@@ -3,3 +3,6 @@
 node_modules/
 secrets.json 
 #dont' upload this file either hence it may contain sensitive data
+__pycache__/
+*.pyc
+

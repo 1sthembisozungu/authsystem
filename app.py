@@ -1,8 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 import os
+import secrets
+from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash
+from flask_mail import Mail, Message
+
 
 from database import get_db_connection
 
@@ -12,6 +16,17 @@ load_dotenv()
 app = Flask(__name__)
 
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+
+
+app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER")
+app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT"))
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS") == "True"
+
+mail = Mail(app)
+
+
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -34,11 +49,12 @@ def register():
             flash("Passwords do not match.")
             return redirect(url_for("register"))
 
-        # Minimum password length
+        # Check password length
         if len(password) < 8:
             flash("Password must be at least 8 characters.")
             return redirect(url_for("register"))
 
+        # Connect to database
         connection = get_db_connection()
 
         try:
@@ -63,18 +79,32 @@ def register():
                 # Hash the password
                 password_hash = generate_password_hash(password)
 
-                # Insert user into database
+                # Generate email verification token
+                verification_token = secrets.token_urlsafe(32)
+
+                # Token expires after 24 hours
+                verification_token_expiry = datetime.now() + timedelta(hours=24)
+
+                # Create the user
                 cursor.execute(
                     """
                     INSERT INTO users
                     (
                         username,
                         email,
-                        password_hash
+                        password_hash,
+                        verification_token,
+                        verification_token_expiry
                     )
-                    VALUES (%s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (username, email, password_hash)
+                    (
+                        username,
+                        email,
+                        password_hash,
+                        verification_token,
+                        verification_token_expiry
+                    )
                 )
 
             connection.commit()
@@ -82,7 +112,43 @@ def register():
         finally:
             connection.close()
 
-        flash("Account created successfully. You can now login.")
+
+        # Create verification link
+        verification_link = url_for(
+            "verify_email",
+            token=verification_token,
+            _external=True
+        )
+
+        # Create email
+        message = Message(
+            subject="Verify your AuthSystem account",
+            sender=app.config["MAIL_USERNAME"],
+            recipients=[email]
+        )
+
+        message.body = f"""
+Hello {username},
+
+Welcome to AuthSystem.
+
+Please verify your email address by clicking the link below:
+
+{verification_link}
+
+This verification link will expire in 24 hours.
+
+If you did not create this account, you can ignore this email.
+
+ Regards,
+AuthSystem
+"""
+
+        # Send email
+        mail.send(message)
+
+        flash("Account created. Please check your email to verify your account.")
+
         return redirect(url_for("login"))
 
     return render_template("register.html")
@@ -109,6 +175,68 @@ def test_db():
 
     except Exception as e:
         return f"Database connection failed: {e}"
+
+
+
+# @app.route("/register", methods=["GET", "POST"])
+# def register():
+#     # all the registration code...
+#     ...
+
+
+@app.route("/verify/<token>")
+def verify_email(token):
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            cursor.execute(
+                """
+                SELECT id, email_verified, verification_token_expiry
+                FROM users
+                WHERE verification_token = %s
+                """,
+                (token,)
+            )
+
+            user = cursor.fetchone()
+
+            if not user:
+                flash("Invalid verification link.")
+                return redirect(url_for("login"))
+
+            user_id, email_verified, token_expiry = user
+
+            if email_verified:
+                flash("Your email is already verified.")
+                return redirect(url_for("login"))
+
+            if token_expiry < datetime.now():
+                flash("This verification link has expired.")
+                return redirect(url_for("login"))
+
+            cursor.execute(
+                """
+                UPDATE users
+                SET
+                    email_verified = TRUE,
+                    verification_token = NULL,
+                    verification_token_expiry = NULL
+                WHERE id = %s
+                """,
+                (user_id,)
+            )
+
+        connection.commit()
+
+    finally:
+        connection.close()
+
+    flash("Email verified successfully. You can now login.")
+
+    return redirect(url_for("login"))
 
 
 if __name__ == "__main__":
