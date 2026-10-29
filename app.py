@@ -155,16 +155,21 @@ AuthSystem
     return render_template("register.html")
 
 
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
     if request.method == "POST":
 
-        email = request.form.get("email", "").strip().lower()
+        # Accept either a username or an email address
+        login_identifier = request.form.get(
+            "login_identifier", ""
+        ).strip()
+
         password = request.form.get("password", "")
 
-        if not email or not password:
-            flash("Please enter your email and password.")
+        if not login_identifier or not password:
+            flash("Please enter your username or email and password.")
             return redirect(url_for("login"))
 
         connection = get_db_connection()
@@ -176,9 +181,10 @@ def login():
                     """
                     SELECT id, username, password_hash, email_verified
                     FROM users
-                    WHERE email = %s
+                    WHERE LOWER(username) = LOWER(%s)
+                       OR LOWER(email) = LOWER(%s)
                     """,
-                    (email,)
+                    (login_identifier, login_identifier)
                 )
 
                 user = cursor.fetchone()
@@ -186,26 +192,29 @@ def login():
         finally:
             connection.close()
 
+        # Check whether the account exists
         if not user:
-            flash("Invalid email or password.")
+            flash("Invalid username/email or password.")
             return redirect(url_for("login"))
 
         user_id, username, password_hash, email_verified = user
 
-        # Check email verification
+        # Email verification is required before login
         if not email_verified:
             flash("Please verify your email before logging in.")
             return redirect(url_for("login"))
 
-        # Check password
+        # Verify the submitted password against the stored hash
         if not check_password_hash(password_hash, password):
-            flash("Invalid email or password.")
+            flash("Invalid username/email or password.")
             return redirect(url_for("login"))
 
-        # Create session
+        # Start a fresh authenticated session
+        session.clear()
         session["user_id"] = user_id
         session["username"] = username
 
+        # Redirect in the same browser tab
         return redirect(url_for("dashboard"))
 
     return render_template("login.html")
@@ -252,7 +261,7 @@ def dashboard():
 @app.route("/logout")
 def logout():
 
-    session.clear()
+    session.clear() #this removes user_id, username from session
 
     flash("You have been logged out.")
 
