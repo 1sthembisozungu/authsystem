@@ -6,6 +6,10 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, flash, session, jsonify
+)
 # from werkzeug.security import generate_password_hash
 
 
@@ -179,7 +183,7 @@ def login():
 
                 cursor.execute(
                     """
-                    SELECT id, username, password_hash, email_verified
+                    SELECT id, username, password_hash, email_verified, theme
                     FROM users
                     WHERE LOWER(username) = LOWER(%s)
                        OR LOWER(email) = LOWER(%s)
@@ -197,7 +201,7 @@ def login():
             flash("Invalid username/email or password.")
             return redirect(url_for("login"))
 
-        user_id, username, password_hash, email_verified = user
+        user_id, username, password_hash, email_verified, theme = user
 
         # Email verification is required before login
         if not email_verified:
@@ -213,6 +217,7 @@ def login():
         session.clear()
         session["user_id"] = user_id
         session["username"] = username
+        session["theme"] = theme
 
         # Redirect in the same browser tab
         return redirect(url_for("dashboard"))
@@ -233,7 +238,7 @@ def dashboard():
 
             cursor.execute(
                 """
-                SELECT username, created_at
+                SELECT username, created_at, theme
                 FROM users
                 WHERE id = %s
                 """,
@@ -249,13 +254,67 @@ def dashboard():
         session.clear()
         return redirect(url_for("login"))
 
-    username, created_at = user
+    username, created_at, theme = user
 
     return render_template(
         "dashboard.html",
         username=username,
-        created_at=created_at
+        created_at=created_at,
+        theme=theme
     )
+
+
+
+@app.route("/api/theme", methods=["POST"])
+def update_theme():
+
+    # Only logged-in users can change their saved preference
+    if "user_id" not in session:
+        return jsonify({"error": "Please log in first."}), 401
+
+    data = request.get_json(silent=True) or {}
+    theme = data.get("theme")
+
+    # Accept only the two supported themes
+    if theme not in ("light", "dark"):
+        return jsonify({"error": "Invalid theme."}), 400
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE users
+                SET theme = %s
+                WHERE id = %s
+                """,
+                (theme, session["user_id"])
+            )
+
+            if cursor.rowcount == 0:
+                connection.rollback()
+                session.clear()
+                return jsonify({"error": "Account not found."}), 404
+
+        connection.commit()
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Could not save theme preference")
+        return jsonify({"error": "Could not save theme preference."}), 500
+
+    finally:
+        connection.close()
+
+    # Keep the session in sync with the database
+    session["theme"] = theme
+
+    return jsonify({
+        "message": "Theme preference saved.",
+        "theme": theme
+    }), 200
+
 
 
 @app.route("/logout")

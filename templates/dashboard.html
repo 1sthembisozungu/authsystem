@@ -10,18 +10,21 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 
-<body>
+<body data-theme="{{ theme }}">
 
     <header class="topbar">
+        <div class="logo">AuthSystem</div>
 
-        <div class="logo">
-            AuthSystem
+        <div class="topbar-actions">
+            <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode">
+                <span id="theme-icon" aria-hidden="true">🌙</span>
+                <span id="theme-label">Dark mode</span>
+            </button>
+
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                Logout
+            </a>
         </div>
-
-        <a href="{{ url_for('logout') }}" class="logout-btn">
-            Logout
-        </a>
-
     </header>
 
 
@@ -29,7 +32,7 @@
 
         <section class="welcome-card">
 
-            <h1>Welcome, @{{ username }}</h1>
+            <h1>Welcome, {{ username }}</h1>
 
             <p class="welcome-text">
                 You are successfully logged in to AuthSystem.
@@ -54,6 +57,8 @@
         </section>
 
     </main>
+
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
 </body>
 
