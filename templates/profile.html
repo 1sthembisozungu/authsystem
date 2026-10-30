@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - AuthSystem</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+
+<body data-theme="{{ theme }}">
+
+    <header class="topbar">
+        <a href="{{ url_for('dashboard') }}" class="logo-link">
+            <div class="logo">AuthSystem</div>
+        </a>
+
+        <div class="topbar-actions">
+            <a href="{{ url_for('dashboard') }}" class="logout-btn">
+                Dashboard
+            </a>
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                Logout
+            </a>
+        </div>
+    </header>
+
+    <main class="dashboard">
+
+        <section class="welcome-card">
+
+            <h1>My Profile</h1>
+
+            <p class="welcome-text">
+                View and manage your account information.
+            </p>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            {% for message in messages %}
+            <div class="flash-messages">
+                <p>{{ message }}</p>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('profile') }}" method="POST">
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+
+                    <input type="text" id="username" name="username" value="{{ username }}" minlength="3" maxlength="30"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+
+                    <input type="email" id="email" value="{{ email }}" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Member Since</label>
+
+                    <p class="info-value">
+                        {{ created_at.strftime('%d %B %Y') }}
+                    </p>
+                </div>
+
+                <button type="submit" class="auth-btn">
+                    Save Changes
+                </button>
+
+            </form>
+
+            <div class="auth-footer">
+                <a href="{{ url_for('change_password') }}">Change Password</a>
+            </div>
+
+        </section>
+
+    </main>
+
+</body>
+
+</html>

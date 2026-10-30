@@ -205,3 +205,14 @@ body {
         border-radius: 16px;
     }
 }
+
+
+.logo-link {
+    text-decoration: none;
+    color: inherit;
+    display: inline-block;
+}
+
+.logo-link:hover {
+    text-decoration: none;
+}

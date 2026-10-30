@@ -420,9 +420,192 @@ def forgot_password():
     return render_template("forgot_password.html")
 
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
 
+@app.route("/profile", methods=["GET", "POST"])
+def profile():
+    # Only logged-in users can access their profile.
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            if request.method == "POST":
+                username = request.form.get("username", "").strip()
+
+                # Validate the username.
+                if not username:
+                    flash("Username cannot be empty.")
+                    return redirect(url_for("profile"))
+
+                if len(username) < 3 or len(username) > 30:
+                    flash("Username must be between 3 and 30 characters.")
+                    return redirect(url_for("profile"))
+
+                # Check whether another user already has this username.
+                cursor.execute(
+                    """
+                    SELECT id
+                    FROM users
+                    WHERE LOWER(username) = LOWER(%s)
+                      AND id != %s
+                    """,
+                    (username, session["user_id"])
+                )
+
+                existing_user = cursor.fetchone()
+
+                if existing_user:
+                    flash("That username is already taken.")
+                    return redirect(url_for("profile"))
+
+                # Update the username.
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET username = %s
+                    WHERE id = %s
+                    """,
+                    (username, session["user_id"])
+                )
+
+                connection.commit()
+
+                # Update the username stored in the session.
+                session["username"] = username
+
+                flash("Your profile has been updated successfully.")
+                return redirect(url_for("profile"))
+
+            # Retrieve the current user's profile.
+            cursor.execute(
+                """
+                SELECT username, email, created_at, theme
+                FROM users
+                WHERE id = %s
+                """,
+                (session["user_id"],)
+            )
+
+            user = cursor.fetchone()
+
+    except Exception:
+        connection.rollback()
+        app.logger.exception("Profile operation failed")
+        flash("Something went wrong. Please try again.")
+        return redirect(url_for("dashboard"))
+
+    finally:
+        connection.close()
+
+    if not user:
+        session.clear()
+        return redirect(url_for("login"))
+
+    username, email, created_at, theme = user
+
+    return render_template(
+        "profile.html",
+        username=username,
+        email=email,
+        created_at=created_at,
+        theme=theme
+    )
+
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+
+        #Only logged-in users can change their password
+        if "user_id" not in session:
+            return redirect(url_for("login"))
+
+        connection = get_db_connection()
+
+        try:
+            with connection.cursor() as cursor:
+
+                if request.method == "POST":
+
+                    # Retrieve password fields from the form.
+                    current_password = request.form.get("current_password", "")
+                    new_password = request.form.get("new_password", "")
+                    confirm_password = request.form.get("confirm_password", "")
+
+                    # Check that all fields are completed.
+                    if not current_password or not new_password or not confirm_password:
+                        flash("Please complete all password fields.")
+                        return redirect(url_for("change_password"))
+
+                    # Retrieve the user's existing password hash.
+                    cursor.execute(
+                        """
+                        SELECT password_hash
+                        FROM users
+                        WHERE id = %s
+                        """,
+                        (session["user_id"],)
+                    )
+
+                    user = cursor.fetchone()
+
+                    if not user:
+                        session.clear()
+                        return redirect(url_for("login"))
+
+                    stored_password_hash = user[0]
+
+                    # Verify the current password.
+                    if not check_password_hash(stored_password_hash, current_password):
+                        flash("Your current password is incorrect.")
+                        return redirect(url_for("change_password"))
+
+                    # Validate the new password.
+                    if len(new_password) < 8:
+                        flash("Your new password must contain at least 8 characters.")
+                        return redirect(url_for("change_password"))
+
+                    # Check that the new passwords match.
+                    if new_password != confirm_password:
+                        flash("Your new passwords do not match.")
+                        return redirect(url_for("change_password"))
+
+                    # Prevent users from reusing their current password.
+                    if check_password_hash(stored_password_hash, new_password):
+                        flash("Your new password must be different from your current password.")
+                        return redirect(url_for("change_password"))
+
+                    # Hash the new password before storing it.
+                    new_password_hash = generate_password_hash(new_password)
+
+                    cursor.execute(
+                        """
+                        UPDATE users
+                        SET password_hash = %s
+                        WHERE id = %s
+                        """,
+                        (new_password_hash, session["user_id"])
+                    )
+
+                    connection.commit()
+
+                    flash("Your password has been changed successfully.")
+                    return redirect(url_for("profile"))
+
+        except Exception:
+            connection.rollback()
+            app.logger.exception("Password change failed")
+            flash("Something went wrong. Please try again.")
+            return redirect(url_for("profile"))
+
+        finally:
+            connection.close()
+
+        return render_template(
+            "change_password.html",
+            theme=session.get("theme", "light")
+        )
 
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])

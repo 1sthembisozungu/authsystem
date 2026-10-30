@@ -13,9 +13,14 @@
 <body data-theme="{{ theme }}">
 
     <header class="topbar">
-        <div class="logo">AuthSystem</div>
+        <a href="{{ url_for('dashboard') }}" class="logo-link">
+            <div class="logo">AuthSystem</div>
+        </a>
 
         <div class="topbar-actions">
+            <a href="{{ url_for('profile') }}" class="logout-btn">
+                My Profile
+            </a>
             <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Switch to dark mode">
                 <span id="theme-icon" aria-hidden="true">🌙</span>
                 <span id="theme-label">Dark mode</span>
