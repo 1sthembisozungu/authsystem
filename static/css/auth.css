@@ -101,6 +101,38 @@ body {
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+
+.auth-btn {
+    width: 100%;
+    padding: 14px 18px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #5b5ce2, #7475f5);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.auth-btn:hover {
+    background: linear-gradient(135deg, #4849c8, #6263e8);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(91, 92, 226, 0.25);
+}
+
+.auth-btn:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.auth-btn:focus-visible {
+    outline: 3px solid rgba(91, 92, 226, 0.3);
+    outline-offset: 3px;
+}
+
 .form-group input::placeholder {
     color: #a1a7b8;
 }
